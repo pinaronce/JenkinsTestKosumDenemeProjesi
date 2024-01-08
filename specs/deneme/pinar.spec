@@ -7,5 +7,18 @@ Every heading in this file denotes a scenario. Every bulleted point denotes a st
      
 deneme
 -------
+tags: smokeTest1
+* Navigate to the URL "https://www.enuygun.com/transfer"
+
+
+deneme 1
+-------
+tags: smokeTest2
+
+* Navigate to the URL "https://www.enuygun.com/transfer"
+
+deneme 2
+-------
+tags: denemeeTest2
 
 * Navigate to the URL "https://www.enuygun.com/transfer"
