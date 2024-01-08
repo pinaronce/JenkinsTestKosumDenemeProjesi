@@ -1,0 +1,64 @@
+stages:
+  - first
+  - build
+  - dependency
+  - failed
+
+
+first:
+  stage: first
+  image: eu.gcr.io/gcp-shared-services/debian:stable-slim 
+  script:
+    - echo test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+
+build:
+  stage: build
+  image: eu.gcr.io/gcp-shared-services/maven/qa:latest
+  script:
+    - mvn -s settings.xml clean install -Dmaven.test.skip=true
+    - mvn sonar:sonar -Dsonar.projectKey=${CI_PROJECT_NAME} -Dsonar.projectName=${CI_PROJECT_NAME}  -Dsonar.language=java -Dsonar.java.binaries=target/sonar -Dsonar.qualitygate.wait=true -Dsonar.host.url=http://35.241.250.212:9000/ -Dsonar.login=2a95bde82e37dc9e0adde6fce60ee47984ae6870
+
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+
+  artifacts:
+    paths:
+      - target/bom.xml
+
+
+
+
+dependency:
+  stage: dependency
+  image: eu.gcr.io/gcp-shared-services/gitlab/curl:latest
+  script:
+    - |
+      curl -X "POST" -k "https://dt.enuygun.tech/api/v1/bom" \
+         -H 'Content-Type: multipart/form-data' \
+         -H "X-Api-Key: Kt07fzCQ0soB8uqz1kVAt9KtQ9DfrT4c" \
+         -F "autoCreate=true" \
+         -F "projectName=${CI_PROJECT_NAME}" \
+         -F "projectVersion=master" \
+         -F "bom=@target/bom.xml"
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+
+
+  environment: development
+
+failed:
+  stage: failed
+  image: eu.gcr.io/gcp-shared-services/gitlab/curl:latest
+  script:
+    - |
+      curl -X POST --data-urlencode \
+      "payload={\"text\": \"Pipeline failed ❌
+      user: $GITLAB_USER_NAME
+      pipeline url: $CI_PIPELINE_URL\"}" \
+      https://chat.enuygun.tech/hooks/bbsxdqgxdjyddjhgwepr4w9rhy
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event" && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "master"'
+  when: on_failure
